@@ -1,0 +1,9 @@
+{
+  "groupings": [
+    {
+      "title": "physicalpknu MQTT",
+      "description": "Control XIAO ESP32C6 boards and read their sensors over a self-hosted Mosquitto broker. Team topic prefix: physicalpknu.",
+      "skills": ["physicalpknu"]
+    }
+  ]
+}

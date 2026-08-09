@@ -1,0 +1,9 @@
+# Real WiFi/MQTT credentials - never commit. Copy arduino_secrets.example.h
+# to arduino_secrets.h and fill in your own values.
+firmware/MqttNode/arduino_secrets.h
+
+# Arduino build artifacts
+**/build/
+*.elf
+*.bin
+*.hex
