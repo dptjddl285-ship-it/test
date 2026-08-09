@@ -14,7 +14,7 @@ skills/     physicalpknu skill (SKILL.md + skill.sh)
 ## Install (the skill)
 
 ```bash
-npx skills add dptjddl285-ship-it/phsyical-AI
+npx skills add dptjddl285-ship-it/test
 ```
 
 That is the [skills.sh](https://www.skills.sh) CLI. It finds the skill in
@@ -25,7 +25,7 @@ install, `-l` to list without installing.
 No Node? A plain shell installer does the same thing:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dptjddl285-ship-it/phsyical-AI/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dptjddl285-ship-it/test/main/install.sh | bash
 ```
 
 On Windows run either from **Git Bash**, not cmd.

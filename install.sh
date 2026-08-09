@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Installs the physicalpknu skill into ~/.claude/skills/physicalpknu.
 #
-#   curl -fsSL https://raw.githubusercontent.com/dptjddl285-ship-it/phsyical-AI/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/dptjddl285-ship-it/test/main/install.sh | bash
 #
 # Fallback for machines without Node. The normal route is the skills.sh CLI:
 #
-#   npx skills add dptjddl285-ship-it/phsyical-AI
+#   npx skills add dptjddl285-ship-it/test
 #
 # Works from a checkout too - it copies the local files instead of downloading
 # when they are already next to this script.
 
 set -euo pipefail
 
-REPO="${PHYSICALPKNU_REPO:-dptjddl285-ship-it/phsyical-AI}"
+REPO="${PHYSICALPKNU_REPO:-dptjddl285-ship-it/test}"
 BRANCH="${PHYSICALPKNU_BRANCH:-main}"
 RAW="https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/physicalpknu"
 DEST="${HOME}/.claude/skills/physicalpknu"
