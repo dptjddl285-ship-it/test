@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부경대 맛집 지도</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        /* 지도 영역 - 전체 화면 */
+        #map {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* 플로팅 UI 패널 */
+        .floating-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            border-radius: 20px;
+            padding: 20px 28px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+            max-width: 95vw;
+            width: 680px;
+        }
+
+        /* 헤더 섹션 */
+        .header-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .header-icon {
+            font-size: 32px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .title-main {
+            font-size: 24px;
+            font-weight: 900;
+            color: #333;
+            letter-spacing: -0.5px;
+        }
+
+        .title-sub {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        /* 검색 영역 */
+        .search-section {
+            margin-bottom: 16px;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 14px;
+            border: 1.5px solid #e9ecef;
+            transition: all 0.25s ease;
+        }
+
+        .search-input-wrapper:focus-within {
+            background: white;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .search-icon {
+            font-size: 18px;
+            opacity: 0.5;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+            outline: none;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .search-input::placeholder {
+            color: #adb5bd;
+            font-weight: 400;
+        }
+
+        .search-button {
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25);
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .search-button:hover {
+            background: linear-gradient(135deg, #e55a2b 0%, #ff7a38 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.35);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        /* 카테고리 칩 영역 */
+        .category-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .nav-item:hover {
+            background: #ebebeb;
+            transform: translateY(-1px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+        }
+
+        .nav-item span:last-child {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .nav-item.active span:last-child {
+            color: white;
+        }
+
+        /* 커스텀 마커 스타일 */
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-emoji-container {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: white;
+            border: 5px solid;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* 영업 중 - 주황색 테두리 */
+        .marker-open {
+            border-color: #ff6b35;
+            animation: pulse-marker 2s ease-in-out infinite;
+        }
+
+        /* 영업 종료 - 검은색 테두리 */
+        .marker-closed {
+            border-color: #000000;
+        }
+
+        .marker-emoji {
+            font-size: 30px;
+            filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.2));
+        }
+
+        /* 펄스 애니메이션 */
+        @keyframes pulse-marker {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            50% {
+                transform: scale(1.18);
+                box-shadow: 0 6px 25px rgba(255, 107, 53, 0.7), 0 0 0 8px rgba(255, 107, 53, 0.4), 0 0 0 16px rgba(255, 107, 53, 0.2);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* 바텀 시트 스타일 */
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 60vh;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bottom-sheet.collapsed {
+            transform: translateY(calc(100% - 70px));
+        }
+
+        .bottom-sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin: 12px auto;
+            cursor: pointer;
+            transition: background 0.25s ease;
+        }
+
+        .bottom-sheet-handle:hover {
+            background: #d0d0d0;
+        }
+
+        .bottom-sheet-header {
+            padding: 0 20px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .bottom-sheet-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .bottom-sheet-content {
+            max-height: calc(60vh - 90px);
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        /* 리스트 카드 스타일 */
+        .store-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .store-card {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border: 2px solid transparent;
+        }
+
+        .store-card:hover {
+            background: white;
+            border-color: #ff6b35;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+            transform: translateX(4px);
+        }
+
+        .store-card-icon {
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+
+        .store-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .store-card-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .store-card-details {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .store-card-rating {
+            color: #ffd43b;
+        }
+
+        /* 팝업 스타일 */
+        .leaflet-popup-content-wrapper {
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            min-width: 280px;
+        }
+
+        .store-popup {
+            padding: 24px;
+        }
+
+        .store-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .store-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .store-address {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        .store-hours {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.8;
+            white-space: pre-line;
+            padding: 4px 0;
+        }
+
+        .star-rating {
+            color: #ffd43b;
+            font-size: 16px;
+            letter-spacing: 1px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        /* 도보 시간 뱃지 */
+        .walk-time-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .detail-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3), 0 2px 6px rgba(255, 107, 53, 0.15);
+        }
+
+        .detail-btn:hover {
+            background: linear-gradient(135deg, #e55a2b 0%, #ff7a38 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4), 0 3px 10px rgba(255, 107, 53, 0.25);
+        }
+
+        .detail-btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* 검색 결과 없음 메시지 */
+        .search-no-result {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            animation: fadeInOut 2s ease forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+        }
+
+        /* MarkerCluster 기본 스타일 오버라이드 */
+        .marker-cluster-small {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-radius: 50%;
+            color: white;
+        }
+
+        .marker-cluster-medium {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-radius: 50%;
+            color: white;
+        }
+
+        .marker-cluster-large {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-radius: 50%;
+            color: white;
+        }
+
+        .marker-cluster div {
+            margin-left: 5px;
+            margin-top: 5px;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .floating-panel {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                transform: none;
+                width: auto;
+                max-width: none;
+                padding: 16px 18px;
+            }
+
+            .header-section {
+                margin-bottom: 12px;
+                padding-bottom: 12px;
+            }
+
+            .header-icon {
+                font-size: 26px;
+            }
+
+            .title-main {
+                font-size: 20px;
+            }
+
+            .title-sub {
+                font-size: 12px;
+            }
+
+            .search-section {
+                margin-bottom: 12px;
+            }
+
+            .search-input-wrapper {
+                padding: 10px 14px;
+            }
+
+            .search-input {
+                font-size: 14px;
+            }
+
+            .search-button {
+                padding: 7px 14px;
+                font-size: 13px;
+            }
+
+            .nav-item {
+                padding: 8px 14px;
+            }
+
+            .nav-icon {
+                font-size: 16px;
+            }
+
+            .nav-item span:last-child {
+                font-size: 13px;
+            }
+
+            .bottom-sheet {
+                max-height: 70vh;
+            }
+
+            .bottom-sheet.collapsed {
+                transform: translateY(calc(100% - 70px));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 지도 영역 -->
+    <div id="map"></div>
+
+    <!-- 플로팅 UI 패널 -->
+    <div class="floating-panel">
+        <!-- 헤더 섹션 -->
+        <div class="header-section">
+            <div class="header-icon">🍽️</div>
+            <h1 class="header-title">
+                <span class="title-main">부경대</span>
+                <span class="title-sub">맛집 지도</span>
+            </h1>
+        </div>
+
+        <!-- 검색 영역 -->
+        <div class="search-section">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="가게명 검색..." />
+                <button id="searchButton" class="search-button">검색</button>
+            </div>
+        </div>
+
+        <!-- 카테고리 칩 영역 -->
+        <div class="category-section">
+            <button class="nav-item active" data-category="all">
+                <span class="nav-icon">🗺️</span>
+                <span>전체</span>
+            </button>
+            <button class="nav-item" data-category="한식">
+                <span class="nav-icon">🍚</span>
+                <span>한식</span>
+            </button>
+            <button class="nav-item" data-category="중식">
+                <span class="nav-icon">🍜</span>
+                <span>중식</span>
+            </button>
+            <button class="nav-item" data-category="분식">
+                <span class="nav-icon">🍢</span>
+                <span>분식</span>
+            </button>
+            <button class="nav-item" data-category="일식">
+                <span class="nav-icon">🍣</span>
+                <span>일식</span>
+            </button>
+            <button class="nav-item" data-category="카페">
+                <span class="nav-icon">☕</span>
+                <span>카페</span>
+            </button>
+            <button class="nav-item" data-category="주점">
+                <span class="nav-icon">🍺</span>
+                <span>주점</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 바텀 시트 -->
+    <div class="bottom-sheet collapsed" id="bottomSheet">
+        <div class="bottom-sheet-handle" id="sheetHandle"></div>
+        <div class="bottom-sheet-header">
+            <h3 class="bottom-sheet-title">맛집 목록</h3>
+        </div>
+        <div class="bottom-sheet-content">
+            <div class="store-list" id="storeList"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script>
+        // 캠퍼스 기준점 (부경대 대연캠퍼스)
+        const campusCenter = { lat: 35.133, lng: 129.105 };
+
+        // 지도 초기화 (부경대 대연캠퍼스 중심)
+        const map = L.map('map').setView([35.136, 129.102], 16);
+
+        // OpenStreetMap 타일 레이어
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // 카테고리별 이모지 아이콘
+        const categoryEmojis = {
+            '한식': '🍚',
+            '분식': '🍢',
+            '일식': '🍣',
+            '중식': '🍜',
+            '카페': '☕',
+            '주점': '🍺'
+        };
+
+        // 22개 실제 식당 데이터 (정확한 좌표)
+        const restaurants = [
+            {
+                name: '연막창 경성대부경대점',
+                address: '부산 남구 용소로19번길 13 1층',
+                category: '한식',
+                hours: '매일 17:00 - 다음 날 01:00',
+                rating: 4.5,
+                lat: 35.1359880,
+                lng: 129.1014271
+            },
+            {
+                name: '응급떡볶이 경성대점',
+                address: '부산 남구 용소로13번길 9',
+                category: '분식',
+                hours: '매일 10:30 - 다음 날 04:00 (라스트오더 03:30)',
+                rating: 4.4,
+                lat: 35.1364760,
+                lng: 129.1010839
+            },
+            {
+                name: '샤브로21 부경대',
+                address: '부산 남구 용소로21번길 62 2층',
+                category: '일식',
+                hours: '매일 11:30 - 22:00 (라스트오더 20:30)',
+                rating: 4.6,
+                lat: 35.1359516,
+                lng: 129.1039949
+            },
+            {
+                name: '밥잘하는남자',
+                address: '부산 남구 용소로19번길 13 1층',
+                category: '한식',
+                hours: '월~수 10:00-20:00, 목 10:00-24:00, 금 00:00-08:00 및 10:00-20:00, 토 11:00-21:00, 일 휴무',
+                rating: 4.7,
+                lat: 35.1356972,
+                lng: 129.1032514
+            },
+            {
+                name: '카페안',
+                address: '부산 남구 용소로21번길',
+                category: '카페',
+                hours: '매일 11:30-22:30',
+                rating: 4.4,
+                lat: 35.1357572,
+                lng: 129.1017500
+            },
+            {
+                name: '카페위드',
+                address: '부산 남구 용소로21번길',
+                category: '카페',
+                hours: '매일 10:00-23:00',
+                rating: 4.4,
+                lat: 35.1360996,
+                lng: 129.1014938
+            },
+            {
+                name: 'CAFE MIMA 카페 미마',
+                address: '부산 남구 용소로19번길',
+                category: '카페',
+                hours: '매일 11:30-21:50',
+                rating: 4.5,
+                lat: 35.1364715,
+                lng: 129.1037310
+            },
+            {
+                name: '롤뺑드빠리',
+                address: '부산 남구 용소로21번길',
+                category: '카페',
+                hours: '매일 09:00-24:00',
+                rating: 4.5,
+                lat: 35.1359462,
+                lng: 129.1011582
+            },
+            {
+                name: '도롱분식 대연점',
+                address: '부산 남구 용소로21번길',
+                category: '분식',
+                hours: '매일 11:00-01:30',
+                rating: 4.5,
+                lat: 35.1358666,
+                lng: 129.1025412
+            },
+            {
+                name: '가성비 최고 떡볶이 빨봉분식',
+                address: '부산 남구 용소로13번길',
+                category: '분식',
+                hours: '매일 11:00-22:00',
+                rating: 3.9,
+                lat: 35.1365881,
+                lng: 129.0999040
+            },
+            {
+                name: '분식쌀롱',
+                address: '부산 남구 용소로13번길',
+                category: '분식',
+                hours: '매일 11:00-22:00',
+                rating: 4.8,
+                lat: 35.1357112,
+                lng: 129.0998089
+            },
+            {
+                name: '에그드랍 부경대점',
+                address: '부산 남구 용소로21번길',
+                category: '한식',
+                hours: '매일 09:00-21:30',
+                rating: 4.3,
+                lat: 35.1363567,
+                lng: 129.1034785
+            },
+            {
+                name: '마마도마',
+                address: '부산 남구 용소로21번길',
+                category: '일식',
+                hours: '매일 10:20 - 22:00',
+                rating: 4.4,
+                lat: 35.1364887,
+                lng: 129.1034347
+            },
+            {
+                name: '쌈마이 닭쌈밥 대연점',
+                address: '부산 남구 용소로19번길',
+                category: '한식',
+                hours: '매일 10:30 - 20:30',
+                rating: 5.0,
+                lat: 35.1358329,
+                lng: 129.1032494
+            },
+            {
+                name: '가야밀면 경성부경대점',
+                address: '부산 남구 용소로21번길',
+                category: '한식',
+                hours: '매일 10:00 - 20:30',
+                rating: 3.0,
+                lat: 35.1351688,
+                lng: 129.1006485
+            },
+            {
+                name: '아웃닭 경성대점',
+                address: '부산 남구 용소로13번길',
+                category: '주점',
+                hours: '매일 16:00 - 02:00',
+                rating: 4.4,
+                lat: 35.1356927,
+                lng: 129.1012457
+            },
+            {
+                name: '겐쇼심야라멘',
+                address: '부산 남구 용소로21번길',
+                category: '일식',
+                hours: '매일 11:30 - 02:00',
+                rating: 3.8,
+                lat: 35.1364920,
+                lng: 129.1015353
+            },
+            {
+                name: '유일한식탁',
+                address: '부산 남구 용소로21번길',
+                category: '일식',
+                hours: '매일 11:00 - 21:00 (브레이크타임 15:30 ~ 17:00)',
+                rating: 4.6,
+                lat: 35.1375005,
+                lng: 129.1038020
+            },
+            {
+                name: '형제국밥',
+                address: '부산 남구 용소로19번길',
+                category: '한식',
+                hours: '매일 08:00 - 21:00',
+                rating: 4.3,
+                lat: 35.1370919,
+                lng: 129.1020502
+            },
+            {
+                name: '신주양꼬치',
+                address: '부산 남구 용소로21번길',
+                category: '중식',
+                hours: '월 16:30~01:00, 화·수·금 17:00~01:00, 목 16:30~01:00, 토 16:00~01:00, 일 16:30~00:00',
+                rating: 4.0,
+                lat: 35.1369912,
+                lng: 129.1013267
+            },
+            {
+                name: '중찬',
+                address: '부산 남구 용소로21번길',
+                category: '중식',
+                hours: '매일 11:00 - 22:00',
+                rating: 4.0,
+                lat: 35.1375095,
+                lng: 129.1027199
+            },
+            {
+                name: '백양숯불갈비',
+                address: '부산 남구 용소로19번길',
+                category: '한식',
+                hours: '매일 16:00 - 00:00',
+                rating: 4.9,
+                lat: 35.1386142,
+                lng: 129.1052023
+            }
+        ];
+
+        // 마커 클러스터 그룹
+        const markerClusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            disableClusteringAtZoom: 17,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                let className = 'marker-cluster-';
+                if (count < 10) className += 'small';
+                else if (count < 100) className += 'medium';
+                else className += 'large';
+
+                return L.divIcon({
+                    html: '<div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);">' + count + '</div>',
+                    className: 'custom-cluster-icon',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+            }
+        });
+
+        // 마커 저장 (검색 기능용)
+        let markersMap = new Map();
+        let activeCategory = 'all';
+
+        // 요일 문자열을 요일 인덱스로 변환 (0: 일, 1: 월, 2: 화, 3: 수, 4: 목, 5: 금, 6: 토)
+        const dayNameToIndex = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+
+        // 영업 상태 확인 함수 (요일별 영업시간 지원)
+        function getStoreStatus(hours) {
+            if (!hours) return 'closed';
+
+            const now = new Date();
+            const currentDay = now.getDay();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+
+            let timeRanges = [];
+
+            if (hours.includes('매일')) {
+                const timeMatch = hours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(다음 날\s+)?(\d{1,2}):(\d{2})/);
+                if (timeMatch) {
+                    const openTime = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+                    const closeTime = parseInt(timeMatch[4]) * 60 + parseInt(timeMatch[5]);
+                    const isNextDay = !!timeMatch[3];
+                    timeRanges.push({ days: [0, 1, 2, 3, 4, 5, 6], openTime, closeTime, isNextDay });
+                }
+            } else if (hours.includes('~') || hours.includes(',')) {
+                const parts = hours.split(',').map(p => p.trim());
+                parts.forEach(part => {
+                    let days = [];
+                    const dayRangeMatch = part.match(/^([월화수목금토일]+)\s*~\s*([월화수목금토일]+)/);
+                    if (dayRangeMatch) {
+                        const startDay = dayNameToIndex[dayRangeMatch[1]];
+                        const endDay = dayNameToIndex[dayRangeMatch[2]];
+                        if (startDay !== undefined && endDay !== undefined) {
+                            for (let d = startDay; d <= endDay; d++) {
+                                days.push(d);
+                            }
+                        }
+                    } else {
+                        const singleDayMatch = part.match(/^([월화수목금토일]+)/);
+                        if (singleDayMatch && dayNameToIndex[singleDayMatch[1]] !== undefined) {
+                            days.push(dayNameToIndex[singleDayMatch[1]]);
+                        }
+                    }
+
+                    const timePart = part.replace(/[월화수목금토일]+\s*~\s*[월화수목금토일]+/, '')
+                                         .replace(/[월화수목금토일]+/, '')
+                                         .trim();
+                    const timeSegments = timePart.split(/및|,|/).map(s => s.trim());
+
+                    timeSegments.forEach(seg => {
+                        const timeMatch = seg.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(다음 날\s+)?(\d{1,2}):(\d{2})/);
+                        if (timeMatch) {
+                            const openTime = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+                            const closeTime = parseInt(timeMatch[4]) * 60 + parseInt(timeMatch[5]);
+                            const isNextDay = !!timeMatch[3];
+                            if (days.length > 0) {
+                                days.forEach(day => {
+                                    timeRanges.push({ days: [day], openTime, closeTime, isNextDay });
+                                });
+                            }
+                        }
+                    });
+                });
+            } else if (hours.includes('휴무')) {
+                return 'closed';
+            }
+
+            const applicableRanges = timeRanges.filter(range => range.days.includes(currentDay));
+
+            if (applicableRanges.length === 0) return 'closed';
+
+            for (const { openTime, closeTime, isNextDay } of applicableRanges) {
+                if (isNextDay) {
+                    if (currentTime >= openTime) return 'open';
+                    if (currentTime < closeTime) return 'open';
+                } else {
+                    if (currentTime >= openTime && currentTime <= closeTime) return 'open';
+                }
+            }
+
+            return 'closed';
+        }
+
+        // 두 좌표 사이의 거리 계산 (미터)
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000; // 지구 반지름 (미터)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+        }
+
+        // 도보 시간 계산 (80m/1분)
+        function calculateWalkTime(distance) {
+            return Math.ceil(distance / 80);
+        }
+
+        // 커스텀 마커 생성 함수
+        function createCustomMarker(restaurant) {
+            const status = getStoreStatus(restaurant.hours);
+            const markerClass = status === 'open' ? 'marker-open' : 'marker-closed';
+
+            const emoji = categoryEmojis[restaurant.category] || '📍';
+
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `
+                    <div class="marker-emoji-container ${markerClass}">
+                        <span class="marker-emoji">${emoji}</span>
+                    </div>
+                `,
+                iconSize: [52, 52],
+                iconAnchor: [26, 26]
+            });
+
+            return icon;
+        }
+
+        // 마커 생성 함수
+        function createMarker(restaurant) {
+            const icon = createCustomMarker(restaurant);
+            const marker = L.marker([restaurant.lat, restaurant.lng], { icon });
+
+            // 도보 시간 계산
+            const distance = calculateDistance(campusCenter.lat, campusCenter.lng, restaurant.lat, restaurant.lng);
+            const walkTime = calculateWalkTime(distance);
+
+            // 별점 표시 (★)
+            const stars = '★'.repeat(Math.floor(restaurant.rating)) +
+                          (restaurant.rating % 1 >= 0.5 ? '☆' : '');
+            const emptyStars = '☆'.repeat(5 - Math.ceil(restaurant.rating));
+
+            // 영업시간 줄바꿈 처리
+            const formattedHours = (restaurant.hours || '영업시간 정보 없음')
+                .replace(/,/g, '<br>')
+                .replace(/\n/g, '<br>');
+
+            // 팝업 내용 생성
+            const popupContent = `
+                <div class="store-popup">
+                    <div class="info-row" style="margin-bottom: 12px;">
+                        <span class="walk-time-badge">🚶 도보 약 ${walkTime}분</span>
+                    </div>
+                    <div class="store-name">${restaurant.name}</div>
+                    <div class="store-info">
+                        <div class="info-row">
+                            <span>📍</span>
+                            <span class="store-address">${restaurant.address}</span>
+                        </div>
+                        <div class="info-row">
+                            <span>🕒</span>
+                            <span class="store-hours">${formattedHours}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="star-rating">${stars}${emptyStars}</span>
+                            <span>${restaurant.rating}</span>
+                        </div>
+                    </div>
+                    <button class="detail-btn" onclick="showDetail('${restaurant.name}')">
+                        상세보기
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+
+            // 마커 저장 (검색 기능용)
+            markersMap.set(restaurant.name, marker);
+
+            return marker;
+        }
+
+        // 상세보기 버튼 클릭 핸들러 (추후 구현 예정)
+        function showDetail(storeName) {
+            alert(`"${storeName}"\n\n상세 페이지 준비 중입니다.\n곧 출시될 기능입니다.`);
+        }
+
+        // 바텀 시트 목록 렌더링
+        function renderStoreList(category) {
+            const storeList = document.getElementById('storeList');
+            storeList.innerHTML = '';
+
+            const filtered = category === 'all'
+                ? restaurants
+                : restaurants.filter(r => r.category === category);
+
+            filtered.forEach(restaurant => {
+                const emoji = categoryEmojis[restaurant.category] || '📍';
+                const card = document.createElement('div');
+                card.className = 'store-card';
+                card.innerHTML = `
+                    <div class="store-card-icon">${emoji}</div>
+                    <div class="store-card-info">
+                        <div class="store-card-name">${restaurant.name}</div>
+                        <div class="store-card-details">
+                            <span class="store-card-rating">★ ${restaurant.rating}</span>
+                            <span>•</span>
+                            <span>${restaurant.category}</span>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    // 지도 이동 및 확대
+                    map.flyTo([restaurant.lat, restaurant.lng], 17, {
+                        duration: 1,
+                        easeLinearity: 0.25
+                    });
+
+                    // 해당 마커 찾아서 팝업 열기
+                    const marker = markersMap.get(restaurant.name);
+                    if (marker) {
+                        setTimeout(() => {
+                            marker.openPopup();
+                        }, 1000);
+                    }
+
+                    // 모바일에서는 바텀 시트 닫기
+                    if (window.innerWidth <= 768) {
+                        bottomSheet.classList.add('collapsed');
+                    }
+                });
+
+                storeList.appendChild(card);
+            });
+        }
+
+        // 마커 렌더링 함수
+        function renderMarkers(category) {
+            markerClusterGroup.clearLayers();
+            markersMap.clear();
+
+            const filtered = category === 'all'
+                ? restaurants
+                : restaurants.filter(r => r.category === category);
+
+            filtered.forEach(restaurant => {
+                const marker = createMarker(restaurant);
+                markerClusterGroup.addLayer(marker);
+            });
+
+            // 바텀 시트 목록도 업데이트
+            renderStoreList(category);
+        }
+
+        // 초기 마커 렌더링
+        renderMarkers('all');
+        map.addLayer(markerClusterGroup);
+
+        // 네비게이션 바 카테고리 필터링
+        const navItems = document.querySelectorAll('.nav-item');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                const category = item.dataset.category;
+                activeCategory = category;
+                renderMarkers(category);
+            });
+        });
+
+        // 바텀 시트 토글
+        const bottomSheet = document.getElementById('bottomSheet');
+        const sheetHandle = document.getElementById('sheetHandle');
+
+        sheetHandle.addEventListener('click', () => {
+            bottomSheet.classList.toggle('collapsed');
+        });
+
+        // 빈 공간 클릭 이벤트 (가장 가까운 식당 찾기)
+        map.on('click', function(e) {
+            const clickLat = e.latlng.lat;
+            const clickLng = e.latlng.lng;
+
+            // 임시 핀 생성
+            const tempMarker = L.marker([clickLat, clickLng], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: #667eea; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);">📍</div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                })
+            }).addTo(map);
+
+            // 가장 가까운 식당 찾기
+            let closestRestaurant = null;
+            let minDistance = Infinity;
+
+            restaurants.forEach(restaurant => {
+                const distance = calculateDistance(clickLat, clickLng, restaurant.lat, restaurant.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestRestaurant = restaurant;
+                }
+            });
+
+            if (closestRestaurant) {
+                // 거리 포맷팅
+                const distanceText = minDistance >= 1000
+                    ? (minDistance / 1000).toFixed(1) + 'km'
+                    : minDistance + 'm';
+
+                const popup = L.popup()
+                    .setLatLng([clickLat, clickLng])
+                    .setContent(`
+                        <div style="padding: 16px; font-family: 'Noto Sans KR', sans-serif;">
+                            <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; color: #333;">
+                                📍 클릭한 곳에서 가장 가까운 맛집
+                            </div>
+                            <div style="font-size: 18px; font-weight: 700; color: #ff6b35; margin-bottom: 4px;">
+                                ${closestRestaurant.name}
+                            </div>
+                            <div style="font-size: 14px; color: #666;">
+                                직선거리: 약 ${distanceText}
+                            </div>
+                        </div>
+                    `)
+                    .openOn(map);
+
+                // 5초 후 임시 마커 제거
+                setTimeout(() => {
+                    map.removeLayer(tempMarker);
+                }, 5000);
+            }
+        });
+
+        // 검색 기능
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+
+        function searchStore() {
+            const query = searchInput.value.trim();
+
+            if (!query) return;
+
+            const foundRestaurant = restaurants.find(r =>
+                r.name.includes(query) || query.includes(r.name)
+            );
+
+            if (foundRestaurant) {
+                const marker = markersMap.get(foundRestaurant.name);
+
+                if (marker) {
+                    // 지도 이동 및 확대
+                    map.flyTo([foundRestaurant.lat, foundRestaurant.lng], 17, {
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+
+                    // 팝업 열기
+                    setTimeout(() => {
+                        marker.openPopup();
+                    }, 1500);
+                }
+            } else {
+                showNoResultMessage();
+            }
+        }
+
+        // 검색 결과 없음 메시지
+        function showNoResultMessage() {
+            const message = document.createElement('div');
+            message.className = 'search-no-result';
+            message.textContent = '검색 결과가 없습니다.';
+            document.body.appendChild(message);
+
+            setTimeout(() => {
+                message.remove();
+            }, 2000);
+        }
+
+        // 검색 버튼 클릭 이벤트
+        searchButton.addEventListener('click', searchStore);
+
+        // 엔터키 입력 이벤트
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchStore();
+            }
+        });
+
+        // 정기적으로 마커 상태 업데이트 (1분마다)
+        setInterval(() => {
+            renderMarkers(activeCategory);
+        }, 60000);
+    </script>
+</body>
+</html>
